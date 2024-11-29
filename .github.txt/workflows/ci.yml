@@ -1,0 +1,67 @@
+# CICD for production pipeline
+name: ci pipeline
+
+run-name: ${{ github.actor }} ci
+
+on:
+  pull_request:
+    branches:
+      - '**'
+    branches_ignore:
+      - 'dependabot/*'
+
+  # Allow manual trigger from github actions to test this pipeline
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      # Checks
+      - name: Sanity Check
+        run: | 
+          echo running sanity test...
+          ls -l
+      # Install dependencies packages and cli
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      - name: Setup Node  
+        uses: actions/setup-node@v4 
+        with:
+          node-version: 20
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{secrets.TOKEN_EXPO}}
+      - name: Setup Firebase CLI
+        run: npm install --global firebase-tools
+      - name: Setup EAS
+        run: npm install --global eas-cli-local-build-plugin
+      - name: Install Dependencies
+        run: bun install
+      # Test
+      - name: Linter Test
+        run: bun run test:linter
+      - name: Unit Test
+        run: bun run test:unit
+      # Build Binary
+      - name: Build Android App
+        if: ${{ github.event_name == 'workflow_dispatch'}} # time consuming process eta 10~15 mins
+        run: |
+          eas build --local \
+            --non-interactive \
+            --output=./app.apk \
+            --platform=android \
+            --profile=preview
+

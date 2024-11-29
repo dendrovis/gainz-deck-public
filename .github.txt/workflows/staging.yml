@@ -1,0 +1,98 @@
+# CICD for demo pipeline, this is to reduce the time-cost incurred on staging pipeline
+name: staging pipeline
+# global variables
+# env:
+
+run-name: ${{ github.actor }} staging
+
+on:
+  push:
+    branches:
+      - 'main'
+
+  # Allow manual trigger from github actions to test this pipeline
+  workflow_dispatch:
+    inputs:
+      releaseNote:
+        description: "Please provide staging release note"
+        required: true
+        default: "release demo notes"
+        type: string
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      # Checks
+      - name: Sanity Check
+        run: | 
+          echo running sanity test...
+          ls -l
+      # Install dependencies packages and cli
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      - name: Setup Node  
+        uses: actions/setup-node@v4 
+        with:
+          node-version: 20
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{secrets.TOKEN_EXPO}}
+      - name: Setup Firebase CLI
+        run: npm install --global firebase-tools
+      - name: Setup EAS
+        run: npm install --global eas-cli-local-build-plugin
+      - name: Install Dependencies
+        run: bun install
+      # Test
+      - name: Linter Test
+        run: bun run test:linter
+      - name: Unit Test
+        run: bun run test:unit
+      # Build Binary
+      - name: Build Android App
+        run: |
+          eas build --local \
+            --non-interactive \
+            --output=./app.apk \
+            --platform=android \
+            --profile=preview
+      # Deployment Internal
+      - name: Set Timestamp
+        run: echo "TIMESTAMP=$(date +%s)" >> $GITHUB_ENV
+      - name: Deploy to Unofficial App Distributor
+        uses: actions/upload-artifact@v4
+        with:
+          name: demo-app-${{ env.TIMESTAMP }}
+          path: ./app.apk
+          if-no-files-found: error
+          retention-days: 1
+      # Deployment External
+      - name: Approval
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          echo Authenticate Approval
+      - name: Deploy to Official App Distributor
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          APP_ID: ${{ secrets.APP_ID }}
+        run: |
+          echo running deployment to official distributor platform
+          firebase appdistribution:distribute ./app.apk \
+          --app "$APP_ID" \
+          --token "$FIREBASE_TOKEN" \
+          --release-notes ${{ inputs.releaseNote }}  \
+          --groups "staging-team"

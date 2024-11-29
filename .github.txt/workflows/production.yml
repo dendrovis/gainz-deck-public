@@ -1,0 +1,83 @@
+# CICD for production pipeline
+name: release pipeline
+
+run-name: ${{ github.actor }} released
+
+on:
+  push:
+    branches:
+      - 'release/v[0-9].[0-9].[0-9]'
+
+  # Allow manual trigger from github actions to test this pipeline
+  workflow_dispatch:
+
+jobs:
+  run:
+    if: false #TODO skip since it is incomplete
+    runs-on: ubuntu-latest 
+    steps:
+      # Checks
+      - name: Sanity Check
+        run: | 
+          echo running sanity test...
+          ls -l
+      # Install dependencies packages and cli
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+      - name: Setup Node  
+        uses: actions/setup-node@v4 
+        with:
+          node-version: 20
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{secrets.TOKEN_EXPO}}
+      - name: Setup EAS
+        run: npm install --global eas-cli-local-build-plugin
+      - name: Install Dependencies
+        run: bun install
+      # Test
+      - name: Linter Test
+        run: bun run test:linter
+      - name: Unit Test
+        run: bun run test:unit
+      # Build Binary
+      - name: Build Android App
+        run: |
+          exit 1
+          eas build \
+            --non-interactive \
+            --platform=android \
+            --profile=production \
+            --no-wait
+      # Binary Test
+      - name: E2E Test
+        run: bun run test:e2e
+      # Deployment
+      - name: Deploy to Unofficial App Distributor
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-app
+          path: ./app.apk
+          if-no-files-found: error
+      # Pre-Official Deployment Condition
+      - name: Approval
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          echo work in progress on approval process
+          exit 1
+      - name: Deploy to Official App Distributor
+        run: |
+          echo running deployment to official distributor platform
+

@@ -1,0 +1,16 @@
+# Ignore everything:
+/*
+
+# Except source code:
+!/src
+
+# Except config files
+!/*.json
+!/*.js
+!/*.ts
+!/*.tsx
+!/.eslint.config.mjs
+!/.gitignore
+!/.prettierignore
+!/babel.config.js
+!/tsconfig.json

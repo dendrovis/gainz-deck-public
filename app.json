@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "gainz-deck",
+    "slug": "gainz-deck",
+    "version": "0.0.0",
+    "orientation": "portrait",
+    "icon": "./src/assets/images/icon.png",
+    "scheme": "gainz-deck",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./src/assets/images/splash_icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#2A2A2A"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./src/assets/images/icon.png",
+        "backgroundColor": "#2A2A2A"
+      },
+      "package": "com.dendrovis.gaindeck"
+    },
+    "plugins": ["expo-router", "expo-image-picker"]
+  }
+}
